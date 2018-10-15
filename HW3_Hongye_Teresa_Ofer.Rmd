@@ -1,0 +1,16 @@
+---
+title: "HW 3 - Hongye, Teresa, Ofer"
+output: pdf_document
+---
+
+```{r}
+# Calling relevant libraries
+library(dplyr)
+library(ROCR)
+```
+
+
+```{r}
+
+```
+
