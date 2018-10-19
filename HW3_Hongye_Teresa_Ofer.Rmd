@@ -233,16 +233,41 @@ sqf.data <- sqf.data %>% select(-crimsusp, -repcmd, -revcmd, -othfeatr, -addrtyp
                                 -stinter, -crossst, -aptnum, -state, -zip, -addrpct,
                                 -post, -serial)
 
-# restrict to CPW stops
-# sqf.data <- sqf.data %>% filter(suspected.crime =='cpw')
+na1s <- c("extra.reports","radio.run","force.hands","force.wall","force.ground","force.drawn","force.pointed","force.baton",
+          "force.handcuffs","force.pepper","force.other","stopped.bc.object",
+          "stopped.bc.desc","stopped.bc.casing","stopped.bc.lookout","stopped.bc.clothing",
+          "stopped.bc.drugs","stopped.bc.furtive","stopped.bc.violent","stopped.bc.bulge",
+          "stopped.bc.other","found.other","found.pistol","found.rifle","found.assault",
+          "found.knife","found.machinegun","additional.report","additional.investigation",
+          "additional.proximity","additional.evasive","additional.associating","additional.direction",
+          "additional.highcrime","additional.time","additional.sights","additional.other","searched.other",
+          "searched.admission","searched.outline","searched.hardobject","frisked.bc.suspected.crime",
+          "frisked.bc.weapons","frisked.bc.attire","frisked.bc.actual.crime","frisked.bc.noncompliance",
+          "frisked.bc.threats","frisked.bc.prior","frisked.bc.furtive","frisked.bc.bulge")
+                             
+for (field in na1s) {
+ sqf.data$field <- recode.1na(field)
+  
+}
 
-proportion.nas <- sqf.data %>% group_by(year) %>% summarize_all(funs(nas =
-sum(is.na(.))/n()))
+convert.na <- function(x){
+ sqf.data %>% 
+    filter(year == "2014") %>% 
+    mutate(
+      x = recode.1na(x)
+    )
+}
+
+sqf.data <- map_df(na1s, convert.na)
+          
+      
+proportion.nas <- sqf.data %>% group_by(year) %>% summarize_all(funs(nas =sum(is.na(.))/n()))
 proportion.nas <- proportion.nas*100
-
+    
+          
 d2014 <- sqf.data.full%>% filter(year==2014)
 
-write_csv(sqf.data, 'sqf.csv')
+write_csv(sqf.data, 'sqf_08_16.csv')
 
 
 # notes
