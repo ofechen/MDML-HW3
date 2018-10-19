@@ -244,28 +244,13 @@ na1s <- c("extra.reports","radio.run","force.hands","force.wall","force.ground",
           "searched.admission","searched.outline","searched.hardobject","frisked.bc.suspected.crime",
           "frisked.bc.weapons","frisked.bc.attire","frisked.bc.actual.crime","frisked.bc.noncompliance",
           "frisked.bc.threats","frisked.bc.prior","frisked.bc.furtive","frisked.bc.bulge")
-                             
-for (field in na1s) {
- sqf.data$field <- recode.1na(field)
-  
-}
 
-convert.na <- function(x){
- sqf.data %>% 
-    filter(year == "2014") %>% 
-    mutate(
-      x = recode.1na(x)
-    )
-}
 
-sqf.data <- map_df(na1s, convert.na)
-          
-      
+
 proportion.nas <- sqf.data %>% group_by(year) %>% summarize_all(funs(nas =sum(is.na(.))/n()))
 proportion.nas <- proportion.nas*100
     
           
-d2014 <- sqf.data.full%>% filter(year==2014)
 
 write_csv(sqf.data, 'sqf_08_16.csv')
 
