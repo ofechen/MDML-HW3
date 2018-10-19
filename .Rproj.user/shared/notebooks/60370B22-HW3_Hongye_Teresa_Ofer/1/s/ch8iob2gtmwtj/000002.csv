@@ -1,0 +1,12 @@
+"0","# IMPORT RAW DATA
+sqf.data.full <- foreach(year=2008:2016, .combine='rbind') %dopar% {
+  filename <- paste0(year, '.csv')
+  this.data <- read_csv(filename)
+  names(this.data) <- tolower (names(this.data))
+  if(length(names(this.data))==111){this.data[,""forceuse""] <- NA}
+  this.data
+}
+"
+"2","Error in foreach(year = 2008:2016, .combine = ""rbind"") %dopar% { : 
+  could not find function ""%dopar%""
+"
