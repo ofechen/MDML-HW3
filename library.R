@@ -88,7 +88,7 @@ recode.0S <- function(f) {
 
 
 # convert offense codes to human-readable names
-offense.codes <- read.delim('Lab 6/src/offense-codes.tsv', header=FALSE, col.names=c('code','offense'))
+offense.codes <- read.delim('offense-codes.tsv', header=FALSE, col.names=c('code','offense'))
 offense.codes$offense <- tolower(offense.codes$offense)
 convert.offense.code <- function(codes) {
 	offenses <- offense.codes$offense[as.integer(codes)]
@@ -98,7 +98,7 @@ convert.offense.code <- function(codes) {
 
 
 # combine and standardize top 100 reasons for arrest.
-arrest.offenses <- read.delim('Lab 6/src/arrest.offenses.tsv', header=FALSE, col.names=c('real.offense','nominal.offense'))
+arrest.offenses <- read.delim('arrest.offenses.tsv', header=FALSE, col.names=c('real.offense','nominal.offense'))
 arrest.offenses$real.offense <- trim(arrest.offenses$real.offense)
 arrest.offenses$nominal.offense <- trim(arrest.offenses$nominal.offense)
 convert.arrest.reasons <- function(rawlist) {
