@@ -234,7 +234,7 @@ sqf.data <- sqf.data %>% select(-crimsusp, -repcmd, -revcmd, -othfeatr, -addrtyp
                                 -post, -serial)
 
 # restrict to CPW stops
-#sqf.data <- sqf.data %>% filter(suspected.crime =='cpw')
+# sqf.data <- sqf.data %>% filter(suspected.crime =='cpw')
 
 proportion.nas <- sqf.data %>% group_by(year) %>% summarize_all(funs(nas =
 sum(is.na(.))/n()))
