@@ -224,7 +224,7 @@ sqf.data <- sqf.data %>% mutate(day = wday(timestamp, label = T, abbr = F),
                                   hour(timestamp) >= 8 & hour(timestamp) < 12 ~ '3',
                                   hour(timestamp) >= 12 & hour(timestamp) < 16 ~ '4',
                                   hour(timestamp) >= 16 & hour(timestamp) < 20 ~ '5',
-                                  hour(timestamp) >= 20 ~ '6',
+                                  hour(timestamp) >= 20 ~ '6'
                                 ))
 
 # drop remaining irrelevant columns
