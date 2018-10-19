@@ -22,8 +22,3 @@ $ git status
 [...]
 #       Documentation/foo.html
 [...]
-
-.Rproj.user
-.Rhistory
-.RData
-.Ruserdata

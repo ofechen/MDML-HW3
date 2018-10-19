@@ -1,0 +1,13 @@
+"0","source(""library.R"")
+"
+"2","
+Attaching package: ‘foreach’
+
+"
+"2","The following objects are masked from ‘package:purrr’:
+
+    accumulate, when
+
+"
+"2","Error in library(proj4) : there is no package called ‘proj4’
+"

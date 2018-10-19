@@ -1,1 +1,0 @@
-{"frames":[],"message":"Error in foreach(year = 2008:2016, .combine = \"rbind\") %dopar% { : \n  could not find function \"%dopar%\"\n"}

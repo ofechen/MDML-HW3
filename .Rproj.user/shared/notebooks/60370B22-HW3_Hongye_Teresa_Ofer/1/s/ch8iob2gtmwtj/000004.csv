@@ -7,6 +7,7 @@ sqf.data.full <- foreach(year=2008:2016, .combine='rbind') %dopar% {
   this.data
 }
 "
-"2","Error in foreach(year = 2008:2016, .combine = ""rbind"") %dopar% { : 
-  could not find function ""%dopar%""
+"2","executing %dopar% sequentially: no parallel backend registered"
+"2","Error in { : 
+  task 1 failed - ""'2008.csv' does not exist in current working directory ('/Users/hongyewu/Documents/GitHub/MDML-HW3').""
 "
