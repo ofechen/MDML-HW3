@@ -130,3 +130,33 @@ approx_auc <- sum(true_samples$predicted.probability > false_samples$predicted.p
 paste0('frequency that a randomly chosen true instance will be ranked higher than a randomly chosen false instance: ', approx_auc)
 
 paste0('Confirmed: ', auc, ' is close to ', approx_auc)
+
+# Part B ----------------------------------------------------------------
+
+# set precincts that don't appear in training set to NA.
+sqf$precinct <- factor(sqf$precinct, levels = levels(factor(train_set$precinct)))
+
+# function for convenience.
+compute_auc_for_year <- function(this_year) {
+  test <- sqf %>% 
+    filter(year==this_year)
+  test <- test %>%
+    mutate(
+      suspect.age = (suspect.age - train_age_mean) / train_age_sd,
+      suspect.height = (suspect.height - train_height_mean) / train_height_sd,
+      suspect.weight = (suspect.weight - train_weight_mean) / train_weight_sd,
+      observation.period = (observation.period - train_period_mean) / train_period_sd
+    )
+  
+  test$predicted.probability <- predict(lmodel, newdata = test, type = "response")
+  test <- test %>% filter(!is.na(predicted.probability))
+  
+  test.pred <- prediction(test$predicted.probability, test$found.weapon)
+  test.perf <- performance(test.pred, "auc")
+  auc <- 100*test.perf@y.values[[1]]
+  auc
+}
+
+years <- 2008:2016
+aucs <- foreach(year=years, .combine='c') %dopar% { compute_auc_for_year(year) }
+qplot(years, aucs, geom='line', xlab='Year', ylab='AUC')
