@@ -160,3 +160,6 @@ compute_auc_for_year <- function(this_year) {
 years <- 2008:2016
 aucs <- foreach(year=years, .combine='c') %dopar% { compute_auc_for_year(year) }
 qplot(years, aucs, geom='line', xlab='Year', ylab='AUC')
+
+# AUC decrease because model was trained on 2008 data. 
+# Distribution of weapon posession changes over time, so model becomes less reliable.
