@@ -224,7 +224,7 @@ sqf.data <- sqf.data %>% mutate(day = wday(timestamp, label = T, abbr = F),
                                   hour(timestamp) >= 8 & hour(timestamp) < 12 ~ '3',
                                   hour(timestamp) >= 12 & hour(timestamp) < 16 ~ '4',
                                   hour(timestamp) >= 16 & hour(timestamp) < 20 ~ '5',
-                                  hour(timestamp) >= 20 ~ '6',
+                                  hour(timestamp) >= 20 ~ '6'
                                 ))
 
 # drop remaining irrelevant columns
@@ -254,6 +254,7 @@ sqf.data <- sqf.data %>% select(-forceuse)
 
 # observation.period still has more than 10% NAs in years 2012 and 2013. What to do?
 # I think we should just zero them out -- Ofer
+# I think we can just leave them tbh -- Hongye
 sqf.data$observation.period[is.na(sqf.data$observation.period)] <- 0
 proportion.nas <- sqf.data %>% group_by(year) %>% summarize_all(funs(nas=sum(is.na(.))/n())) * 100
 

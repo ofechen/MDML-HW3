@@ -2,18 +2,18 @@
     "collab_server" : "",
     "contents" : "",
     "created" : 1539977061391.000,
-    "dirty" : true,
+    "dirty" : false,
     "encoding" : "UTF-8",
     "folds" : "",
     "hash" : "0",
     "id" : "26573093",
-    "lastKnownWriteTime" : 1539977067,
-    "last_content_update" : 1539978020306,
+    "lastKnownWriteTime" : 1540431498,
+    "last_content_update" : 1540431498984,
     "path" : "~/Documents/GitHub/MDML-HW3/HW3_Hongye_Teresa_Ofer.Rmd",
     "project_path" : "HW3_Hongye_Teresa_Ofer.Rmd",
     "properties" : {
-        "cursorPosition" : "242,7",
-        "scrollLine" : "227"
+        "cursorPosition" : "235,40",
+        "scrollLine" : "171"
     },
     "relative_order" : 1,
     "source_on_save" : false,

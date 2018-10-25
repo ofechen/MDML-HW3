@@ -157,17 +157,17 @@ compute_auc_for_year <- function(this_year) {
   auc
 }
 
-years <- c(2009:2013,2015:2016)
-# Ofer -- 2014 doesn't work for me because of lack of observations but we can change the vector back to 2008:2016 if it's just me
+years <- c(2008:2016)
 aucs <- foreach(year=years, .combine='c') %dopar% { compute_auc_for_year(year) }
-qplot(years, aucs, geom='line', xlab='Year', ylab='AUC')
+qplot(years, aucs, geom='line', xlab='Year', ylab='AUC', ylim = c(0,100))
 
-# AUC decrease because model was trained on 2008 data. 
+# AUC decrease because model was only trained on 2008 data. 
 # Distribution of weapon posession might change over time, so model becomes less reliable.
 # An option is to train the model based on sample data from all years so that any ecological changes are represented in the data
 
 ## Part C --- We need to do one for each group member!!
 
+# Plots Group 1
 # Choose target variable and restrict data to a relevant subset
 
 train_set_contraband <- sqf %>% 
@@ -249,5 +249,66 @@ for (threshold in seq(0,1,0.05)) {
     per_pos <- sum(test_set_con_10_16$pos_over_thresh,na.rm=TRUE)/sum(test_set_con_10_16$found.contraband,na.rm=TRUE)
     con_model_perf [index,] <- c(threshold,per_above,per_pos)
 }
-View(con_model_perf)
 
+
+# Plots Group 2
+# Target variable: whether the suspect was searched
+
+# Spliting 2008 and 2011 data in half for training and test sets
+smp <- sqf %>% filter(year == c(2008:2011))
+smp_size <- floor(0.5* nrow(smp))
+
+set.seed(123)
+train_ind <- sample(seq_len(nrow(smp)), size = smp_size)
+
+train_searched <- smp[train_ind, ]
+test_searched <- smp[-train_ind, ]
+
+# Set standardization values
+train_age_mean_s <- mean(train_searched$suspect.age, na.rm = TRUE)
+train_age_sd_s <- sd(train_searched$suspect.age, na.rm = TRUE)
+train_height_mean_s <- mean(train_searched$suspect.height, na.rm=TRUE)
+train_height_sd_s <- sd(train_searched$suspect.height, na.rm=TRUE)
+train_weight_mean_s <- mean(train_searched$suspect.weight, na.rm=TRUE)
+train_weight_sd_s <- sd(train_searched$suspect.weight, na.rm=TRUE)
+train_period_mean_s <- mean(train_searched$observation.period, na.rm=TRUE)
+train_period_sd_s <- sd(train_searched$observation.period, na.rm=TRUE)
+
+# Standardize train set
+train_searched <- train_searched %>%
+  mutate(
+    suspect.age = (suspect.age - train_age_mean_s) / train_age_sd_s,
+    suspect.height = (suspect.height - train_height_mean_s) / train_height_sd_s,
+    suspect.weight = (suspect.weight - train_weight_mean_s) / train_weight_sd_s,
+    observation.period = (observation.period - train_period_mean_s) / train_period_sd_s
+  )
+
+# Standardize test set
+test_searched <- test_searched %>%
+  mutate(
+    suspect.age = (suspect.age - train_age_mean_s) / train_age_sd_s,
+    suspect.height = (suspect.height - train_height_mean_s) / train_height_sd_s,
+    suspect.weight = (suspect.weight - train_weight_mean_s) / train_weight_sd_s,
+    observation.period = (observation.period - train_period_mean_s) / train_period_sd_s
+  )
+
+# Select independent variables
+train_searched <- train_searched %>% select(
+  searched,
+  additional.proximity, additional.highcrime, additional.sights, additional.associating,
+  contains("stopped.bc."),
+  suspect.age, suspect.build, suspect.sex, suspect.height, suspect.weight, 
+  inside, radio.run, observation.period, day, month, time.period
+)
+
+# Model fitting
+smodel <- glm(searched ~., data = train_searched, family = "binomial")
+test_searched$prediction <- predict(smodel, newdata = test_searched, type = "response")
+
+# Performance plot
+search_plot_data <- test_searched %>% arrange() %>% 
+  mutate(pct_searched = )
+  select(observation.period, searched)
+
+theme_set(theme_bw())
+s <- ggplot(data = search_plot_data, aes(x = observation.period, y = searched))
