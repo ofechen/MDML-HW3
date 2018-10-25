@@ -334,17 +334,56 @@ train_searched <- train_searched %>% select(
   inside, radio.run, observation.period, day, month, time.period
 )
 
+test_searched <- test_searched %>% select(
+  searched,
+  additional.proximity, additional.highcrime, additional.sights, additional.associating,
+  contains("stopped.bc."),
+  suspect.age, suspect.build, suspect.sex, suspect.height, suspect.weight, 
+  inside, radio.run, observation.period, day, month, time.period
+)
+
 # Model fitting
 smodel <- glm(searched ~., data = train_searched, family = "binomial")
 test_searched$prediction <- predict(smodel, newdata = test_searched, type = "response")
 
+# What is the relationship between number of stops and a person being searched as a result of the stop?
 # Performance plot
-search_plot_data <- test_searched %>% arrange() %>% 
-  mutate(pct_searched = )
-  select(observation.period, searched)
+plot.data <- test_searched %>% arrange(desc(prediction)) %>% 
+  mutate(numstops = row_number(), percent.outcome = cumsum(searched)/sum(searched),
+         stops = numstops/n()) %>% select(stops, percent.outcome)
 
 theme_set(theme_bw())
-s <- ggplot(data = search_plot_data, aes(x = observation.period, y = searched))
+p <- ggplot(data=plot.data, aes(x=stops, y=percent.outcome)) 
+p <- p + geom_line()
+p <- p + scale_x_log10('\nPercent of stops', limits=c(0.003, 1), breaks=c(.003,.01,.03,.1,.3,1), 
+                       labels=c('0.3%','1%','3%','10%','30%','100%'))
+p <- p + scale_y_continuous("Percent of search conducted", limits=c(0, 1), labels=scales::percent)
+p
+ggsave(plot=p, file='2c_2_performance_main.pdf', height=5, width=5)
+
+# Calibration plot
+searched_cal_data <- test_searched %>% mutate(calibration = round(100*prediction)) %>% 
+  group_by(calibration) %>% summarize(model.estimate = mean(prediction),
+                                      numstops = n(),
+                                      empirical.estimate = mean(searched))
+
+p <- ggplot(data = searched_cal_data, aes(y=empirical.estimate, x=model.estimate))
+p <- p + geom_point(alpha=0.5, aes(size=numstops))
+p <- p + scale_size_area(guide='none', max_size=15)
+p <- p + geom_abline(intercept=0, slope=1, linetype="dashed")
+p <- p + scale_y_log10('Empirical probability \n', limits=c(.001,1), breaks=c(.001,.003,.01,.03,.1,.3,1), 
+                       labels=c('0.1%','0.3%','1%','3%','10%','30%','100%'))
+p <- p + scale_x_log10('\nModel estimated probability', limits=c(.001,1), breaks=c(.001,.003,.01,.03,.1,.3,1), 
+                       labels=c('0.1%','0.3%','1%','3%','10%','30%','100%'))
+p
+ggsave(plot=p, file='2c_2_calibration_main.pdf', height=5, width=5)
+# This model seems pretty accurate in predicting cases with lower empirical probability up untill 30%. 
+# Most of the dots converge on the diagonal line except for the instances with relatively higher probabilities. 
+# The result indicates that our model underpredicts the probability of a person being searched once they are stopped. 
+# The reason might be that the independent variables chosen to fit this model might not have a very high R-squared, or
+# that they were bad proxies to estimate the proability/reason behind stop and search behaviors of the police. 
+# This might also shed lights on whether stop-and-frisk strategy is sometimes used as a harrassment methods, to merely
+# disrupt citizen's normal routine, as one would predict more serious suspicion might be more likely to result in searches
 
 
 # Plots Group 3
@@ -394,14 +433,14 @@ train_set3 <- train_set3 %>%
   mutate(
     suspect.age = (suspect.age - train_age_mean_con) / train_age_sd_con,
     suspect.height = (suspect.height - train_height_mean_con) / train_height_sd_con,
-    suspect.weight = (suspect.weight - train_weight_mean_con) / train_weight_sd_con,
+    suspect.weight = (suspect.weight - train_weight_mean_con) / train_weight_sd_con
   )
 # Standardize test set.
 test_set3 <- test_set3 %>%
   mutate(
     suspect.age = (suspect.age - train_age_mean_con) / train_age_sd_con,
     suspect.height = (suspect.height - train_height_mean_con) / train_height_sd_con,
-    suspect.weight = (suspect.weight - train_weight_mean_con) / train_weight_sd_con,
+    suspect.weight = (suspect.weight - train_weight_mean_con) / train_weight_sd_con
   )
 
 man_lmodel <- glm(is.manhattan ~ ., data = train_set3, family = "binomial")
