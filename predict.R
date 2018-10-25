@@ -129,7 +129,7 @@ false_samples <- false_samples[sample(nrow(false_samples), 10000, replace=T),]
 approx_auc <- sum(true_samples$predicted.probability > false_samples$predicted.probability) / 10000
 paste0('frequency that a randomly chosen true instance will be ranked higher than a randomly chosen false instance: ', approx_auc)
 
-paste0('Confirmed: ', auc, ' is close to ', approx_auc)
+paste0('Confirmed: ', auc, ' is close to ', approx_auc*100)
 
 # Part B ----------------------------------------------------------------
 
@@ -157,9 +157,69 @@ compute_auc_for_year <- function(this_year) {
   auc
 }
 
-years <- 2008:2016
+years <- c(2009:2013,2015:2016)
+# Ofer -- 2014 doesn't work for me because of lack of observations but we can change the vector back to 2008:2016 if it's just me
 aucs <- foreach(year=years, .combine='c') %dopar% { compute_auc_for_year(year) }
 qplot(years, aucs, geom='line', xlab='Year', ylab='AUC')
 
 # AUC decrease because model was trained on 2008 data. 
-# Distribution of weapon posession changes over time, so model becomes less reliable.
+# Distribution of weapon posession might change over time, so model becomes less reliable.
+# An option is to train the model based on sample data from all years so that any ecological changes are represented in the data
+
+## Part C --- We need to do one for each group member!!
+
+# Choose target variable and restrict data to a relevant subset
+
+train_set_contraband <- sqf %>% 
+  filter(
+   #suspected.crime == c("criminal sale of controlled substance","criminal possesion of controlled substance"),
+    year %in% c(2008:2009)
+  )
+
+# Splitting the data temporally, using 2008-2010 as the training data and any subsequent year as the test data. 
+# This creates a split of about 60-40 between train and test sets which is acceptable
+
+test_set_con_10_16 <- sqf %>% 
+  filter(
+    year %in% c(2010:2016)
+  )
+
+# Remember train set standarization values.
+train_age_mean_con <- mean(test_set_con_10_16$suspect.age, na.rm = TRUE)
+train_age_sd_con <- sd(test_set_con_10_16$suspect.age, na.rm = TRUE)
+train_height_mean_con <- mean(test_set_con_10_16$suspect.height, na.rm=TRUE)
+train_height_sd_con <- sd(test_set_con_10_16$suspect.height, na.rm=TRUE)
+train_weight_mean_con <- mean(test_set_con_10_16$suspect.weight, na.rm=TRUE)
+train_weight_sd_con <- sd(test_set_con_10_16$suspect.weight, na.rm=TRUE)
+train_period_mean_con <- mean(test_set_con_10_16$observation.period, na.rm=TRUE)
+train_period_sd_con <- sd(test_set_con_10_16$observation.period, na.rm=TRUE)
+
+# Standardize train set.
+train_set_contraband <- train_set_contraband %>%
+  mutate(
+    suspect.age = (suspect.age - train_age_mean_con) / train_age_sd_con,
+    suspect.height = (suspect.height - train_height_mean_con) / train_height_sd_con,
+    suspect.weight = (suspect.weight - train_weight_mean_con) / train_weight_sd_con,
+    observation.period = (observation.period - train_period_mean_con) / train_period_sd_con
+  )
+
+# Fit logit regression on training set
+train_set_contraband <- train_set_contraband %>% select(found.contraband, precinct, location.housing, 
+                                  contains('additional.'), contains('stopped.bc'), 
+                                  suspect.age, suspect.build, suspect.sex, suspect.height, suspect.weight, 
+                                  inside, radio.run, observation.period, day, month, time.period)
+con_lmodel <- glm(found.contraband ~ ., data = train_set_contraband, family = "binomial")
+test_set_con_10_16$prediction <- predict(con_lmodel,test_set_con_10_16, type = "response")
+# collceting performance tibble
+con_model_perf <- tibble(threshold = numeric(),percent_above = numeric(),percent_pos=numeric())
+
+for (threshold in seq(0,1,0.05)) {
+  index<-threshold/0.05 + 1
+  test_set_con_10_16 <- test_set_con_10_16 %>% mutate (over_thresh=case_when(
+    prediction >= threshold ~ 1,
+    prediction < threshold ~ 0))
+   per_above <-mean(test_set_con_10_16$over_thresh)
+   per_pos <- mean(test_set_con_10_16$over_thresh==test_set_con_10_16$found.contranband)
+    con_model_perf [index,] <- 
+      c(threshold,per_above,per_pos)
+}
