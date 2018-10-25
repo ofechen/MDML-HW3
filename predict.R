@@ -277,6 +277,11 @@ p <- p + scale_x_log10('\nModel estimated probability', limits=c(.001,1), breaks
                        labels=c('0.1%','0.3%','1%','3%','10%','30%','100%'))
 p
 ggsave(plot=p, file='con_calibration_main.pdf', height=5, width=5)
+# In this case the focus is on contraband, the data was temporally split into 2, the years 08-09 and the rest.
+# Data was restricted to stop reasons relating to selling or buying drugs. The results indicate the the model built 
+# is not great but could be used to reduce the number of false positives. If tolerance for illeagel substances is 
+# not zero then there is an option to reduce the number of stops. according to the performance plot for example
+# 30% of the stops account for about 60% of the contraband.
 
 
 # Plots Group 2
