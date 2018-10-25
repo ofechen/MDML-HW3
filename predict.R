@@ -157,17 +157,17 @@ compute_auc_for_year <- function(this_year) {
   auc
 }
 
-years <- c(2009:2013,2015:2016)
-# Ofer -- 2014 doesn't work for me because of lack of observations but we can change the vector back to 2008:2016 if it's just me
+years <- c(2008:2016)
 aucs <- foreach(year=years, .combine='c') %dopar% { compute_auc_for_year(year) }
-qplot(years, aucs, geom='line', xlab='Year', ylab='AUC')
+qplot(years, aucs, geom='line', xlab='Year', ylab='AUC', ylim = c(0,100))
 
-# AUC decrease because model was trained on 2008 data. 
+# AUC decrease because model was only trained on 2008 data. 
 # Distribution of weapon posession might change over time, so model becomes less reliable.
 # An option is to train the model based on sample data from all years so that any ecological changes are represented in the data
 
 ## Part C --- We need to do one for each group member!!
 
+# Plots Group 1
 # Choose target variable and restrict data to a relevant subset
 
 train_set_contraband <- sqf %>% 
@@ -223,3 +223,14 @@ for (threshold in seq(0,1,0.05)) {
     con_model_perf [index,] <- 
       c(threshold,per_above,per_pos)
 }
+
+
+# Plots Group 2
+# Target variable: whether the suspect was searched
+
+# Spliting 2008 and 2011 data 
+train_searched <- sqf %>% 
+  filter(year == c(2008:2011)) %>% 
+  sample_frac(0.5, replace = F)
+
+

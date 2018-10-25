@@ -12,7 +12,7 @@ source("library.R")
 
 ```{r}
 # IMPORT RAW DATA
-sqf.data.full <- foreach(year=2008:2016, .combine='rbind') %dopar% {
+sqf.data.full <- foreach::foreach(year=2008:2016, .combine='rbind') %dopar% {
   filename <- paste0(year, '.csv')
   this.data <- read_csv(filename)
   names(this.data) <- tolower (names(this.data))
@@ -233,18 +233,31 @@ sqf.data <- sqf.data %>% select(-crimsusp, -repcmd, -revcmd, -othfeatr, -addrtyp
                                 -stinter, -crossst, -aptnum, -state, -zip, -addrpct,
                                 -post, -serial)
 
-# restrict to CPW stops
-#sqf.data <- sqf.data %>% filter(suspected.crime =='cpw')
+# Change NAs for these columns to False.
+na1s <- c("extra.reports","radio.run","force.hands","force.wall","force.ground","force.drawn","force.pointed","force.baton",
+          "force.handcuffs","force.pepper","force.other","stopped.bc.object",
+          "stopped.bc.desc","stopped.bc.casing","stopped.bc.lookout","stopped.bc.clothing",
+          "stopped.bc.drugs","stopped.bc.furtive","stopped.bc.violent","stopped.bc.bulge",
+          "stopped.bc.other","found.other","found.pistol","found.rifle","found.assault",
+          "found.knife","found.machinegun","additional.report","additional.investigation",
+          "additional.proximity","additional.evasive","additional.associating","additional.direction",
+          "additional.highcrime","additional.time","additional.sights","additional.other","searched.other",
+          "searched.admission","searched.outline","searched.hardobject","frisked.bc.suspected.crime",
+          "frisked.bc.weapons","frisked.bc.attire","frisked.bc.actual.crime","frisked.bc.noncompliance",
+          "frisked.bc.threats","frisked.bc.prior","frisked.bc.furtive","frisked.bc.bulge",
+          "found.gun", "found.weapon")
+sqf.data[na1s][is.na(sqf.data[na1s])] <- FALSE
+sqf.data[na1s][sqf.data[na1s]==1] <- TRUE
 
-proportion.nas <- sqf.data %>% group_by(year) %>% summarize_all(funs(nas =
-sum(is.na(.))/n()))
-proportion.nas <- proportion.nas*100
+# remove forceuse column as it isn't in prof's csv file.
+sqf.data <- sqf.data %>% select(-forceuse)
 
-d2014 <- sqf.data.full%>% filter(year==2014)
+# observation.period still has more than 10% NAs in years 2012 and 2013. What to do?
+# I think we should just zero them out -- Ofer
+# I think we can just leave them tbh -- Hongye
+sqf.data$observation.period[is.na(sqf.data$observation.period)] <- 0
+proportion.nas <- sqf.data %>% group_by(year) %>% summarize_all(funs(nas=sum(is.na(.))/n())) * 100
 
-write_csv(sqf.data, 'sqf.csv')
+write_csv(sqf.data, 'sqf_08_16.csv')
 
-
-# notes
-# apparently 'forceuse' was only used in 2011, may need to be dropped
 ```
