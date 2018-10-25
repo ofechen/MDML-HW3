@@ -185,14 +185,14 @@ test_set_con_10_16 <- sqf %>%
   )
 
 # Remember train set standarization values.
-train_age_mean_con <- mean(test_set_con_10_16$suspect.age, na.rm = TRUE)
-train_age_sd_con <- sd(test_set_con_10_16$suspect.age, na.rm = TRUE)
-train_height_mean_con <- mean(test_set_con_10_16$suspect.height, na.rm=TRUE)
-train_height_sd_con <- sd(test_set_con_10_16$suspect.height, na.rm=TRUE)
-train_weight_mean_con <- mean(test_set_con_10_16$suspect.weight, na.rm=TRUE)
-train_weight_sd_con <- sd(test_set_con_10_16$suspect.weight, na.rm=TRUE)
-train_period_mean_con <- mean(test_set_con_10_16$observation.period, na.rm=TRUE)
-train_period_sd_con <- sd(test_set_con_10_16$observation.period, na.rm=TRUE)
+train_age_mean_con <- mean(train_set_contraband$suspect.age, na.rm = TRUE)
+train_age_sd_con <- sd(train_set_contraband$suspect.age, na.rm = TRUE)
+train_height_mean_con <- mean(train_set_contraband$suspect.height, na.rm=TRUE)
+train_height_sd_con <- sd(train_set_contraband$suspect.height, na.rm=TRUE)
+train_weight_mean_con <- mean(train_set_contraband$suspect.weight, na.rm=TRUE)
+train_weight_sd_con <- sd(train_set_contraband$suspect.weight, na.rm=TRUE)
+train_period_mean_con <- mean(train_set_contraband$observation.period, na.rm=TRUE)
+train_period_sd_con <- sd(train_set_contraband$observation.period, na.rm=TRUE)
 
 # Standardize train set.
 train_set_contraband <- train_set_contraband %>%
@@ -201,6 +201,25 @@ train_set_contraband <- train_set_contraband %>%
     suspect.height = (suspect.height - train_height_mean_con) / train_height_sd_con,
     suspect.weight = (suspect.weight - train_weight_mean_con) / train_weight_sd_con,
     observation.period = (observation.period - train_period_mean_con) / train_period_sd_con
+  )
+
+# Remember test set standarization values.
+test_age_mean_con <- mean(test_set_con_10_16$suspect.age, na.rm = TRUE)
+test_age_sd_con <- sd(test_set_con_10_16$suspect.age, na.rm = TRUE)
+test_height_mean_con <- mean(test_set_con_10_16$suspect.height, na.rm=TRUE)
+test_height_sd_con <- sd(test_set_con_10_16$suspect.height, na.rm=TRUE)
+test_weight_mean_con <- mean(test_set_con_10_16$suspect.weight, na.rm=TRUE)
+test_weight_sd_con <- sd(test_set_con_10_16$suspect.weight, na.rm=TRUE)
+test_period_mean_con <- mean(test_set_con_10_16$observation.period, na.rm=TRUE)
+test_period_sd_con <- sd(test_set_con_10_16$observation.period, na.rm=TRUE)
+
+# Standardize test set.
+test_set_con_10_16 <- test_set_con_10_16 %>%
+  mutate(
+    suspect.age = (suspect.age - test_age_mean_con) / test_age_sd_con,
+    suspect.height = (suspect.height - test_height_mean_con) / test_height_sd_con,
+    suspect.weight = (suspect.weight - test_weight_mean_con) / test_weight_sd_con,
+    observation.period = (observation.period - test_period_mean_con) / test_period_sd_con
   )
 
 # Fit logit regression on training set
@@ -212,6 +231,7 @@ con_lmodel <- glm(found.contraband ~ ., data = train_set_contraband, family = "b
 test_set_con_10_16$prediction <- predict(con_lmodel,test_set_con_10_16, type = "response")
 # collceting performance tibble
 con_model_perf <- tibble(threshold = numeric(),percent_above = numeric(),percent_pos=numeric())
+con_model_perf <- tibble(threshold = numeric(),percent_above = double(),percent_pos=double())
 
 for (threshold in seq(0,1,0.05)) {
   index<-threshold/0.05 + 1
@@ -223,6 +243,11 @@ for (threshold in seq(0,1,0.05)) {
    per_pos <- mean(test_set_con_10_16$pos_over_thresh,na.rm=TRUE)/mean(test_set_con_10_16$found.contraband,na.rm=TRUE)
     con_model_perf [index,] <- 
       c(threshold,per_above,per_pos)
+    mutate(true_positive = if_else( over_thresh & found.contraband, TRUE, FALSE)) %>% 
+    mutate(pos_over_thresh = if_else(over_thresh & true_positive ,TRUE,FALSE))
+    per_above <- mean(test_set_con_10_16$over_thresh,na.rm=TRUE)
+    per_pos <- sum(test_set_con_10_16$pos_over_thresh,na.rm=TRUE)/sum(test_set_con_10_16$found.contraband,na.rm=TRUE)
+    con_model_perf [index,] <- c(threshold,per_above,per_pos)
 }
 View(con_model_perf)
 
