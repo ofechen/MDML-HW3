@@ -168,11 +168,11 @@ qplot(years, aucs, geom='line', xlab='Year', ylab='AUC', ylim = c(0,100))
 ## Part C --- We need to do one for each group member!!
 
 # Plots Group 1
-# Choose target variable and restrict data to a relevant subset
+# Choose target variable (contraband found) and restrict data to a relevant subset
 
 train_set_contraband <- sqf %>% 
   filter(
-   #suspected.crime == c("criminal sale of controlled substance","criminal possesion of controlled substance"),
+   suspected.crime == c("criminal sale of controlled substance","criminal possesion of controlled substance"),
     year %in% c(2008:2009)
   )
 
@@ -181,6 +181,7 @@ train_set_contraband <- sqf %>%
 
 test_set_con_10_16 <- sqf %>% 
   filter(
+    suspected.crime == c("criminal sale of controlled substance","criminal possesion of controlled substance"),
     year %in% c(2010:2016)
   )
 
@@ -231,24 +232,51 @@ con_lmodel <- glm(found.contraband ~ ., data = train_set_contraband, family = "b
 test_set_con_10_16$prediction <- predict(con_lmodel,test_set_con_10_16, type = "response")
 # collceting performance tibble
 con_model_perf <- tibble(threshold = numeric(),percent_above = numeric(),percent_pos=numeric())
-con_model_perf <- tibble(threshold = numeric(),percent_above = double(),percent_pos=double())
 
 for (threshold in seq(0,1,0.05)) {
   index<-threshold/0.05 + 1
   test_set_con_10_16 <- test_set_con_10_16 %>% mutate (over_thresh=case_when(
     prediction >= threshold ~ TRUE,
     prediction < threshold ~ FALSE)) %>% 
-    mutate(pos_over_thresh = if_else(over_thresh & prediction==found.contraband,TRUE,FALSE))
-   per_above <-mean(test_set_con_10_16$over_thresh,na.rm=TRUE)
-   per_pos <- mean(test_set_con_10_16$pos_over_thresh,na.rm=TRUE)/mean(test_set_con_10_16$found.contraband,na.rm=TRUE)
-    con_model_perf [index,] <- 
-      c(threshold,per_above,per_pos)
     mutate(true_positive = if_else( over_thresh & found.contraband, TRUE, FALSE)) %>% 
     mutate(pos_over_thresh = if_else(over_thresh & true_positive ,TRUE,FALSE))
-    per_above <- mean(test_set_con_10_16$over_thresh,na.rm=TRUE)
-    per_pos <- sum(test_set_con_10_16$pos_over_thresh,na.rm=TRUE)/sum(test_set_con_10_16$found.contraband,na.rm=TRUE)
-    con_model_perf [index,] <- c(threshold,per_above,per_pos)
+  per_above <- mean(test_set_con_10_16$over_thresh,na.rm=TRUE)
+  per_pos <- sum(test_set_con_10_16$pos_over_thresh,na.rm=TRUE)/sum(test_set_con_10_16$found.contraband,na.rm=TRUE)
+  con_model_perf [index,] <- c(threshold,per_above,per_pos)
 }
+
+# Making performance plot
+plot.data <- test_set_con_10_16 %>% arrange(desc(prediction)) %>% 
+  mutate(numstops = row_number(), percent.outcome = cumsum(found.contraband)/sum(found.contraband),
+         stops = numstops/n()) %>% select(stops, percent.outcome)
+
+# create and save plot
+theme_set(theme_bw())
+p <- ggplot(data=plot.data, aes(x=stops, y=percent.outcome)) 
+p <- p + geom_line()
+p <- p + scale_x_log10('\nPercent of stops', limits=c(0.003, 1), breaks=c(.003,.01,.03,.1,.3,1), 
+                       labels=c('0.3%','1%','3%','10%','30%','100%'))
+p <- p + scale_y_continuous("Percent of contraband captured", limits=c(0, 1), labels=scales::percent)
+p
+ggsave(plot=p, file='con_performance_plot.pdf', height=5, width=5)
+
+# 2) make main calibration plot
+plot.data <- test_set_con_10_16 %>% mutate(calibration = round(100*prediction)) %>% 
+  group_by(calibration) %>% summarize(model.estimate = mean(prediction),
+                                      numstops = n(),
+                                      empirical.estimate = mean(found.contraband))
+
+# create and save plot
+p <- ggplot(data = plot.data, aes(y=empirical.estimate, x=model.estimate))
+p <- p + geom_point(alpha=0.5, aes(size=numstops))
+p <- p + scale_size_area(guide='none', max_size=15)
+p <- p + geom_abline(intercept=0, slope=1, linetype="dashed")
+p <- p + scale_y_log10('Empirical probability \n', limits=c(.001,1), breaks=c(.001,.003,.01,.03,.1,.3,1), 
+                       labels=c('0.1%','0.3%','1%','3%','10%','30%','100%'))
+p <- p + scale_x_log10('\nModel estimated probability', limits=c(.001,1), breaks=c(.001,.003,.01,.03,.1,.3,1), 
+                       labels=c('0.1%','0.3%','1%','3%','10%','30%','100%'))
+p
+ggsave(plot=p, file='con_calibration_main.pdf', height=5, width=5)
 
 
 # Plots Group 2
