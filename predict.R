@@ -216,10 +216,13 @@ con_model_perf <- tibble(threshold = numeric(),percent_above = numeric(),percent
 for (threshold in seq(0,1,0.05)) {
   index<-threshold/0.05 + 1
   test_set_con_10_16 <- test_set_con_10_16 %>% mutate (over_thresh=case_when(
-    prediction >= threshold ~ 1,
-    prediction < threshold ~ 0))
-   per_above <-mean(test_set_con_10_16$over_thresh)
-   per_pos <- mean(test_set_con_10_16$over_thresh==test_set_con_10_16$found.contranband)
+    prediction >= threshold ~ TRUE,
+    prediction < threshold ~ FALSE)) %>% 
+    mutate(pos_over_thresh = if_else(over_thresh & prediction==found.contraband,TRUE,FALSE))
+   per_above <-mean(test_set_con_10_16$over_thresh,na.rm=TRUE)
+   per_pos <- mean(test_set_con_10_16$pos_over_thresh,na.rm=TRUE)/mean(test_set_con_10_16$found.contraband,na.rm=TRUE)
     con_model_perf [index,] <- 
       c(threshold,per_above,per_pos)
 }
+View(con_model_perf)
+
