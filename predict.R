@@ -216,10 +216,11 @@ con_model_perf <- tibble(threshold = numeric(),percent_above = numeric(),percent
 for (threshold in seq(0,1,0.05)) {
   index<-threshold/0.05 + 1
   test_set_con_10_16 <- test_set_con_10_16 %>% mutate (over_thresh=case_when(
-    prediction >= threshold ~ 1,
-    prediction < threshold ~ 0))
-   per_above <-mean(test_set_con_10_16$over_thresh)
-   per_pos <- mean(test_set_con_10_16$over_thresh==test_set_con_10_16$found.contranband)
+    prediction >= threshold ~ TRUE,
+    prediction < threshold ~ FALSE)) %>% 
+    mutate(pos_over_thresh = if_else(over_thresh & prediction==found.contraband,TRUE,FALSE))
+   per_above <-mean(test_set_con_10_16$over_thresh,na.rm=TRUE)
+   per_pos <- mean(test_set_con_10_16$pos_over_thresh,na.rm=TRUE)/mean(test_set_con_10_16$found.contraband,na.rm=TRUE)
     con_model_perf [index,] <- 
       c(threshold,per_above,per_pos)
 }
@@ -228,9 +229,61 @@ for (threshold in seq(0,1,0.05)) {
 # Plots Group 2
 # Target variable: whether the suspect was searched
 
-# Spliting 2008 and 2011 data 
-train_searched <- sqf %>% 
-  filter(year == c(2008:2011)) %>% 
-  sample_frac(0.5, replace = F)
+# Spliting 2008 and 2011 data in half for training and test sets
+smp <- sqf %>% filter(year == c(2008:2011))
+smp_size <- floor(0.5* nrow(smp))
 
+set.seed(123)
+train_ind <- sample(seq_len(nrow(smp)), size = smp_size)
 
+train_searched <- smp[train_ind, ]
+test_searched <- smp[-train_ind, ]
+
+# Set standardization values
+train_age_mean_s <- mean(train_searched$suspect.age, na.rm = TRUE)
+train_age_sd_s <- sd(train_searched$suspect.age, na.rm = TRUE)
+train_height_mean_s <- mean(train_searched$suspect.height, na.rm=TRUE)
+train_height_sd_s <- sd(train_searched$suspect.height, na.rm=TRUE)
+train_weight_mean_s <- mean(train_searched$suspect.weight, na.rm=TRUE)
+train_weight_sd_s <- sd(train_searched$suspect.weight, na.rm=TRUE)
+train_period_mean_s <- mean(train_searched$observation.period, na.rm=TRUE)
+train_period_sd_s <- sd(train_searched$observation.period, na.rm=TRUE)
+
+# Standardize train set
+train_searched <- train_searched %>%
+  mutate(
+    suspect.age = (suspect.age - train_age_mean_s) / train_age_sd_s,
+    suspect.height = (suspect.height - train_height_mean_s) / train_height_sd_s,
+    suspect.weight = (suspect.weight - train_weight_mean_s) / train_weight_sd_s,
+    observation.period = (observation.period - train_period_mean_s) / train_period_sd_s
+  )
+
+# Standardize test set
+test_searched <- test_searched %>%
+  mutate(
+    suspect.age = (suspect.age - train_age_mean_s) / train_age_sd_s,
+    suspect.height = (suspect.height - train_height_mean_s) / train_height_sd_s,
+    suspect.weight = (suspect.weight - train_weight_mean_s) / train_weight_sd_s,
+    observation.period = (observation.period - train_period_mean_s) / train_period_sd_s
+  )
+
+# Select independent variables
+train_searched <- train_searched %>% select(
+  searched,
+  additional.proximity, additional.highcrime, additional.sights, additional.associating,
+  contains("stopped.bc."),
+  suspect.age, suspect.build, suspect.sex, suspect.height, suspect.weight, 
+  inside, radio.run, observation.period, day, month, time.period
+)
+
+# Model fitting
+smodel <- glm(searched ~., data = train_searched, family = "binomial")
+test_searched$prediction <- predict(smodel, newdata = test_searched, type = "response")
+
+# Performance plot
+search_plot_data <- test_searched %>% arrange() %>% 
+  mutate(pct_searched = )
+  select(observation.period, searched)
+
+theme_set(theme_bw())
+s <- ggplot(data = search_plot_data, aes(x = observation.period, y = searched))
