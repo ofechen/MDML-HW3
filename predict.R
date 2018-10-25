@@ -440,3 +440,15 @@ p <- p + scale_x_log10('\nModel estimated probability', limits=c(.001,1), breaks
                        labels=c('0.1%','0.3%','1%','3%','10%','30%','100%'))
 p
 ggsave(plot=p, file='2c_3_calibration_main.pdf', height=5, width=5)
+
+
+# Paragraph summary:
+summary(man_lmodel)
+
+# We suspected that crimes within Manhattan are peculiar and may be distinuishable from crimes outside
+# of Manhattan. We built a classifier based on stop data and found that the classifier's performance is better
+# than random, suggesting that to some degree, Manhattan crimes are different from non-Manhattan crimes.
+# Looking at the learned weights of our logistic regression model, we interestingly find that
+# possession of either a pistol or machine gun is a good indicator for Manhattan-based crimes, while
+# possession of a gun negatives correlates with Manhattan-based crimes. The rest of our independent variables
+# have much smaller weights compared to these.
