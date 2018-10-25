@@ -277,6 +277,11 @@ p <- p + scale_x_log10('\nModel estimated probability', limits=c(.001,1), breaks
                        labels=c('0.1%','0.3%','1%','3%','10%','30%','100%'))
 p
 ggsave(plot=p, file='con_calibration_main.pdf', height=5, width=5)
+# In this case the focus is on contraband, the data was temporally split into 2, the years 08-09 and the rest.
+# Data was restricted to stop reasons relating to selling or buying drugs. The results indicate the the model built 
+# is not great but could be used to reduce the number of false positives. If tolerance for illeagel substances is 
+# not zero then there is an option to reduce the number of stops. according to the performance plot for example
+# 30% of the stops account for about 60% of the contraband.
 
 
 # Plots Group 2
@@ -340,103 +345,3 @@ search_plot_data <- test_searched %>% arrange() %>%
 
 theme_set(theme_bw())
 s <- ggplot(data = search_plot_data, aes(x = observation.period, y = searched))
-
-
-# Plots Group 3
-
-# See if weapon possession and suspect attributes can be used to predict whether the incident occured in Manhattan.
-# A classifier with high AUC would indicate that crimes in Manhattan are distinguishable from crimes outside the bustling city.
-
-sqf_manhattan <- sqf %>% mutate(is.manhattan=(city=="MANHATTAN"))
-sqf_manhattan <- sqf_manhattan %>% filter(suspected.crime == "cpw") %>% select(
-  year,
-  is.manhattan,
-  contains('found.'),
-  suspect.age,
-  suspect.sex,
-  suspect.height,
-  suspect.weight,
-  contains('additional.'),
-  contains('stopped.bc'),
-  day,
-  month,
-  time.period,
-  radio.run)
-
-train_set3 <- sqf_manhattan %>% 
-  filter(
-    year == 2008
-  )
-
-# Splitting the data temporally, using 2008-2010 as the training data and any subsequent year as the test data. 
-# This creates a split of about 60-40 between train and test sets which is acceptable
-
-test_set3 <- sqf_manhattan %>% 
-  filter(
-    year == 2009
-  )
-
-# Remember train set standarization values.
-train_age_mean_con <- mean(train_set3$suspect.age, na.rm = TRUE)
-train_age_sd_con <- sd(train_set3$suspect.age, na.rm = TRUE)
-train_height_mean_con <- mean(train_set3$suspect.height, na.rm=TRUE)
-train_height_sd_con <- sd(train_set3$suspect.height, na.rm=TRUE)
-train_weight_mean_con <- mean(train_set3$suspect.weight, na.rm=TRUE)
-train_weight_sd_con <- sd(train_set3$suspect.weight, na.rm=TRUE)
-
-# Standardize train set.
-train_set3 <- train_set3 %>%
-  mutate(
-    suspect.age = (suspect.age - train_age_mean_con) / train_age_sd_con,
-    suspect.height = (suspect.height - train_height_mean_con) / train_height_sd_con,
-    suspect.weight = (suspect.weight - train_weight_mean_con) / train_weight_sd_con,
-  )
-# Standardize test set.
-test_set3 <- test_set3 %>%
-  mutate(
-    suspect.age = (suspect.age - train_age_mean_con) / train_age_sd_con,
-    suspect.height = (suspect.height - train_height_mean_con) / train_height_sd_con,
-    suspect.weight = (suspect.weight - train_weight_mean_con) / train_weight_sd_con,
-  )
-
-man_lmodel <- glm(is.manhattan ~ ., data = train_set3, family = "binomial")
-
-# 1. generate predictions for test set
-test_set3$predicted.probability <- predict(man_lmodel, newdata = test_set3, type='response') 
-
-# 2. output predictions in decreasing order
-test_set3 %>% arrange(desc(predicted.probability)) %>% select(is.manhattan,
-                                                         predicted.probability)
-
-# 1) make performance plot
-plot.data <- test_set3 %>% arrange(desc(predicted.probability)) %>% 
-  mutate(numstops = row_number(), percent.outcome = cumsum(is.manhattan)/sum(is.manhattan),
-         stops = numstops/n()) %>% select(stops, percent.outcome)
-
-# create and save plot
-theme_set(theme_bw())
-p <- ggplot(data=plot.data, aes(x=stops, y=percent.outcome)) 
-p <- p + geom_line()
-p <- p + scale_x_log10('\nPercent of stops', limits=c(0.003, 1), breaks=c(.003,.01,.03,.1,.3,1), 
-                       labels=c('0.3%','1%','3%','10%','30%','100%'))
-p <- p + scale_y_continuous("Percent of Manhattan crimes", limits=c(0, 1), labels=scales::percent)
-p
-ggsave(plot=p, file='2c_3_performance_plot.pdf', height=5, width=5)
-
-# 2) make main calibration plot
-plot.data <- test_set3 %>% mutate(calibration = round(100*predicted.probability)) %>% 
-  group_by(calibration) %>% summarize(model.estimate = mean(predicted.probability),
-                                      numstops = n(),
-                                      empirical.estimate = mean(is.manhattan))
-
-# create and save plot
-p <- ggplot(data = plot.data, aes(y=empirical.estimate, x=model.estimate))
-p <- p + geom_point(alpha=0.5, aes(size=numstops))
-p <- p + scale_size_area(guide='none', max_size=15)
-p <- p + geom_abline(intercept=0, slope=1, linetype="dashed")
-p <- p + scale_y_log10('Empirical probability \n', limits=c(.001,1), breaks=c(.001,.003,.01,.03,.1,.3,1), 
-                       labels=c('0.1%','0.3%','1%','3%','10%','30%','100%'))
-p <- p + scale_x_log10('\nModel estimated probability', limits=c(.001,1), breaks=c(.001,.003,.01,.03,.1,.3,1), 
-                       labels=c('0.1%','0.3%','1%','3%','10%','30%','100%'))
-p
-ggsave(plot=p, file='2c_3_calibration_main.pdf', height=5, width=5)
